@@ -26,7 +26,7 @@ model:
         placeholder_strings: ["*"]
         initializer_words: ["dragon"]
         per_image_tokens: false
-        num_vectors_per_token: 1
+        num_vectors_per_token: 8
         progressive_words: False
 
     unet_config:
@@ -75,7 +75,7 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 3
+    batch_size: 4
     num_workers: 8
     wrap: false
     train:
@@ -108,4 +108,4 @@ lightning:
   trainer:
     benchmark: True
     max_steps: 100000
-    accumulate_grad_batches: 1
+    accumulate_grad_batches: 2
