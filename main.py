@@ -178,7 +178,7 @@ def get_parser(**parser_kwargs):
         const=True,
         default=False,
         nargs="?",
-        help="disable test",
+        help="Don't use mixed precision during training",
     )
 
     return parser
@@ -755,7 +755,7 @@ if __name__ == "__main__":
         trainer_kwargs["callbacks"] = [instantiate_from_config(callbacks_cfg[k]) for k in callbacks_cfg]
         trainer_kwargs["max_steps"] = trainer_opt.max_steps
 
-        if not opt.no_half:
+        if not cpu and not opt.no_half:
             mixedPrecPlugin = NativeMixedPrecisionPlugin(16, "cuda")
             trainer_kwargs["precision"] = 16
             trainer_kwargs["plugins"] = [mixedPrecPlugin]
