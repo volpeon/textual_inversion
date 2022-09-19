@@ -17,6 +17,7 @@ from pytorch_lightning.trainer import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, Callback, LearningRateMonitor
 from pytorch_lightning.utilities.distributed import rank_zero_only
 from pytorch_lightning.utilities import rank_zero_info
+from pytorch_lightning.plugins.precision import NativeMixedPrecisionPlugin
 
 from ldm.data.base import Txt2ImgIterableBaseDataset
 from ldm.util import instantiate_from_config
@@ -170,6 +171,15 @@ def get_parser(**parser_kwargs):
     parser.add_argument("--init_word", 
         type=str, 
         help="Word to use as source for initial token embedding")
+
+    parser.add_argument(
+        "--no_half",
+        type=str2bool,
+        const=True,
+        default=False,
+        nargs="?",
+        help="disable test",
+    )
 
     return parser
 
@@ -588,16 +598,20 @@ if __name__ == "__main__":
         # merge trainer cli with config
         trainer_config = lightning_config.get("trainer", OmegaConf.create())
         # default to ddp
-        trainer_config["accelerator"] = "ddp"
+        trainer_config["accelerator"] = "gpu"
+        trainer_config["strategy"] = "ddp"
+
         for k in nondefault_trainer_args(opt):
             trainer_config[k] = getattr(opt, k)
         if not "gpus" in trainer_config:
             del trainer_config["accelerator"]
+            del trainer_config["strategy"]
             cpu = True
         else:
             gpuinfo = trainer_config["gpus"]
             print(f"Running on GPUs {gpuinfo}")
             cpu = False
+
         trainer_opt = argparse.Namespace(**trainer_config)
         lightning_config.trainer = trainer_config
 
@@ -614,6 +628,9 @@ if __name__ == "__main__":
             model = load_model_from_config(config, opt.actual_resume)
         else:
             model = instantiate_from_config(config.model)
+
+        ### if not opt.no_half:
+        ###     model = model.half()
 
         # trainer and callbacks
         trainer_kwargs = dict()
@@ -738,6 +755,11 @@ if __name__ == "__main__":
         trainer_kwargs["callbacks"] = [instantiate_from_config(callbacks_cfg[k]) for k in callbacks_cfg]
         trainer_kwargs["max_steps"] = trainer_opt.max_steps
 
+        if not opt.no_half:
+            mixedPrecPlugin = NativeMixedPrecisionPlugin(16, "cuda")
+            trainer_kwargs["precision"] = 16
+            trainer_kwargs["plugins"] = [mixedPrecPlugin]
+
         trainer = Trainer.from_argparse_args(trainer_opt, **trainer_kwargs)
         trainer.logdir = logdir  ###
 
@@ -823,5 +845,5 @@ if __name__ == "__main__":
             dst = os.path.join(dst, "debug_runs", name)
             os.makedirs(os.path.split(dst)[0], exist_ok=True)
             os.rename(logdir, dst)
-        if trainer.global_rank == 0:
-            print(trainer.profiler.summary())
+        # if trainer.global_rank == 0:
+        #     print(trainer.profiler.summary())

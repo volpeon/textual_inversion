@@ -75,18 +75,18 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 3
+    batch_size: 1
     num_workers: 8
     wrap: false
     train:
-      target: ldm.data.personalized.PersonalizedBase
+      target: ldm.data.personalized_style.PersonalizedBase
       params:
         size: 512
         set: train
         per_image_tokens: false
         repeats: 100
     validation:
-      target: ldm.data.personalized.PersonalizedBase
+      target: ldm.data.personalized_style.PersonalizedBase
       params:
         size: 512
         set: val
