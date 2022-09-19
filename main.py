@@ -467,8 +467,8 @@ class CUDACallback(Callback):
         epoch_time = time.time() - self.start_time
 
         try:
-            max_memory = trainer.training_type_plugin.reduce(max_memory)
-            epoch_time = trainer.training_type_plugin.reduce(epoch_time)
+            max_memory = trainer.strategy.reduce(max_memory)
+            epoch_time = trainer.strategy.reduce(epoch_time)
 
             rank_zero_info(f"Average Epoch time: {epoch_time:.2f} seconds")
             rank_zero_info(f"Average Peak memory {max_memory:.2f}MiB")
@@ -599,7 +599,7 @@ if __name__ == "__main__":
         trainer_config = lightning_config.get("trainer", OmegaConf.create())
         # default to ddp
         trainer_config["accelerator"] = "gpu"
-        trainer_config["strategy"] = "ddp"
+        trainer_config["strategy"] = "ddp_find_unused_parameters_false"
 
         for k in nondefault_trainer_args(opt):
             trainer_config[k] = getattr(opt, k)
