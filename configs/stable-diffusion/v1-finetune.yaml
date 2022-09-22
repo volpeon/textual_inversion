@@ -1,5 +1,5 @@
 model:
-  base_learning_rate: 5.0e-04
+  base_learning_rate: 5e-04
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
     linear_start: 0.00085
@@ -26,7 +26,7 @@ model:
         placeholder_strings: ["*"]
         initializer_words: ["dragon"]
         per_image_tokens: false
-        num_vectors_per_token: 8
+        num_vectors_per_token: 16
         progressive_words: False
 
     unet_config:
@@ -79,14 +79,14 @@ data:
     num_workers: 8
     wrap: false
     train:
-      target: ldm.data.personalized.PersonalizedBase
+      target: ldm.data.lgs.LGS
       params:
         size: 512
         set: train
         per_image_tokens: false
         repeats: 100
     validation:
-      target: ldm.data.personalized.PersonalizedBase
+      target: ldm.data.lgs.LGS
       params:
         size: 512
         set: val
@@ -108,4 +108,4 @@ lightning:
   trainer:
     benchmark: True
     max_steps: 100000
-    accumulate_grad_batches: 2
+    accumulate_grad_batches: 1
