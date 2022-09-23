@@ -26,7 +26,7 @@ model:
         placeholder_strings: ["*"]
         initializer_words: ["dragon"]
         per_image_tokens: false
-        num_vectors_per_token: 16
+        num_vectors_per_token: 1
         progressive_words: False
 
     unet_config:
@@ -73,25 +73,12 @@ model:
       target: ldm.modules.encoders.modules.FrozenCLIPEmbedder
 
 data:
-  target: main.DataModuleFromConfig
+  target: ldm.data.lgs.LGSModule
   params:
     batch_size: 4
     num_workers: 8
-    wrap: false
-    train:
-      target: ldm.data.lgs.LGS
-      params:
-        size: 512
-        set: train
-        per_image_tokens: false
-        repeats: 100
-    validation:
-      target: ldm.data.lgs.LGS
-      params:
-        size: 512
-        set: val
-        per_image_tokens: false
-        repeats: 10
+    size: 512
+    repeats: 100
 
 lightning:
   modelcheckpoint:
