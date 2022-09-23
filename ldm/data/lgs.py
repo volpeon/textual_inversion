@@ -52,7 +52,7 @@ class LGSModule(pl.LightningDataModule):
         return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)
 
     def val_dataloader(self):
-        dataset = LGS(self.data_val, size=self.size, repeats=self.repeats, interpolation=self.interpolation,
+        dataset = LGS(self.data_val, size=self.size, interpolation=self.interpolation,
                       flip_p=self.flip_p, placeholder_token=self.placeholder_token, center_crop=self.center_crop)
         return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.num_workers)
 
