@@ -30,7 +30,6 @@ class LGSModule(pl.LightningDataModule):
         self.center_crop = center_crop
 
         self.batch_size = batch_size
-        self.dataset_configs = dict()
         self.num_workers = num_workers if num_workers is not None else batch_size * 2
 
     def prepare_data(self):
@@ -50,7 +49,7 @@ class LGSModule(pl.LightningDataModule):
     def train_dataloader(self):
         dataset = LGS(self.data_train, size=self.size, repeats=self.repeats, interpolation=self.interpolation,
                       flip_p=self.flip_p, placeholder_token=self.placeholder_token, center_crop=self.center_crop)
-        return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.num_workers)
+        return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)
 
     def val_dataloader(self):
         dataset = LGS(self.data_val, size=self.size, repeats=self.repeats, interpolation=self.interpolation,
@@ -62,7 +61,7 @@ class LGS(Dataset):
     def __init__(self,
                  data,
                  size=None,
-                 repeats=100,
+                 repeats=1,
                  interpolation="bicubic",
                  flip_p=0.5,
                  placeholder_token="*",
