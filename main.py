@@ -155,39 +155,35 @@ def get_parser(**parser_kwargs):
         default=True,
         help="Prepend the final directory in the data_root to the output directory name")
 
-    parser.add_argument("--actual_resume",
-                        type=str,
-                        required=True,
-                        help="Path to model to actually resume from")
-
-    parser.add_argument("--data_root",
-                        type=str,
-                        required=True,
-                        help="Path to directory with training images")
-
-    parser.add_argument("--embedding_manager_ckpt",
-                        type=str,
-                        default="",
-                        help="Initialize embedding manager from a checkpoint")
-
-    parser.add_argument("--placeholder_tokens",
-                        type=str,
-                        nargs="+",
-                        default=["*"],
-                        help="Placeholder token which will be used to denote the concept in future prompts")
-
-    parser.add_argument("--init_word",
-                        type=str,
-                        help="Word to use as source for initial token embedding")
+    parser.add_argument(
+        "--actual_resume",
+        type=str,
+        required=True,
+        help="Path to model to actually resume from")
 
     parser.add_argument(
-        "--no_half",
-        type=str2bool,
-        const=True,
-        default=False,
-        nargs="?",
-        help="Don't use mixed precision during training",
-    )
+        "--data_root",
+        type=str,
+        required=True,
+        help="Path to directory with training images")
+
+    parser.add_argument(
+        "--embedding_manager_ckpt",
+        type=str,
+        default="",
+        help="Initialize embedding manager from a checkpoint")
+
+    parser.add_argument(
+        "--placeholder_tokens",
+        type=str,
+        nargs="+",
+        default=["*"],
+        help="Placeholder token which will be used to denote the concept in future prompts")
+
+    parser.add_argument(
+        "--init_word",
+        type=str,
+        help="Word to use as source for initial token embedding")
 
     return parser
 
@@ -653,9 +649,6 @@ if __name__ == "__main__":
         else:
             model = instantiate_from_config(config.model)
 
-        # if not opt.no_half:
-        ###     model = model.half()
-
         # trainer and callbacks
         trainer_kwargs = dict()
 
@@ -712,14 +705,6 @@ if __name__ == "__main__":
             trainer_kwargs["checkpoint_callback"] = instantiate_from_config(
                 modelckpt_cfg)
 
-        """
-        "stochastic_weight_averaging": {
-            "target": "pytorch_lightning.callbacks.StochasticWeightAveraging",
-            "params": {
-                "swa_lrs": 1e-2
-            }
-        },
-        """
         # add callback which sets up log directory
         default_callbacks_cfg = {
             "setup_callback": {
@@ -781,6 +766,20 @@ if __name__ == "__main__":
             default_callbacks_cfg.update(
                 default_metrics_over_trainsteps_ckpt_dict)
 
+        if 'stochastic_weight_averaging' in callbacks_cfg:
+            print(
+                'Caution: Running with Stochastic Weight Averaging. This will require more working memory.')
+            default_stochastic_weight_averaging_dict = {
+                "stochastic_weight_averaging": {
+                    "target": "pytorch_lightning.callbacks.StochasticWeightAveraging",
+                    "params": {
+                        "swa_lrs": 1e-2
+                    }
+                }
+            }
+            default_callbacks_cfg.update(
+                default_stochastic_weight_averaging_dict)
+
         callbacks_cfg = OmegaConf.merge(default_callbacks_cfg, callbacks_cfg)
         if 'ignore_keys_callback' in callbacks_cfg and hasattr(trainer_opt, 'resume_from_checkpoint'):
             callbacks_cfg.ignore_keys_callback.params['ckpt_path'] = trainer_opt.resume_from_checkpoint
@@ -791,9 +790,9 @@ if __name__ == "__main__":
             callbacks_cfg[k]) for k in callbacks_cfg]
         trainer_kwargs["max_steps"] = trainer_opt.max_steps
 
-        if not cpu and not opt.no_half:
-            mixedPrecPlugin = NativeMixedPrecisionPlugin(16, "cuda")
-            trainer_kwargs["precision"] = 16
+        if "precision" in trainer_config:
+            mixedPrecPlugin = NativeMixedPrecisionPlugin(
+                trainer_config["precision"], "cpu" if cpu else "cuda")
             trainer_kwargs["plugins"] = [mixedPrecPlugin]
 
         trainer = Trainer.from_argparse_args(trainer_opt, **trainer_kwargs)
