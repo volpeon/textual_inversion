@@ -806,28 +806,21 @@ if __name__ == "__main__":
             config.data.params.validation.params.data_root = opt.data_root
         data = instantiate_from_config(config.data)
 
-        # NOTE according to https://pytorch-lightning.readthedocs.io/en/latest/datamodules.html
-        # calling these ourselves should not be necessary but it is.
-        # lightning still takes care of proper multiprocessing though
-        data.prepare_data()
-        data.setup()
-        print("#### Data #####")
-        for k in data.datasets:
-            print(
-                f"{k}, {data.datasets[k].__class__.__name__}, {len(data.datasets[k])}")
-
         # configure learning rate
         bs, base_lr = config.data.params.batch_size, config.model.base_learning_rate
+
         if not cpu:
             ngpu = len(lightning_config.trainer.gpus.strip(",").split(','))
         else:
             ngpu = 1
+
         if 'accumulate_grad_batches' in lightning_config.trainer:
             accumulate_grad_batches = lightning_config.trainer.accumulate_grad_batches
         else:
             accumulate_grad_batches = 1
         print(f"accumulate_grad_batches = {accumulate_grad_batches}")
         lightning_config.trainer.accumulate_grad_batches = accumulate_grad_batches
+
         if opt.scale_lr:
             model.learning_rate = accumulate_grad_batches * ngpu * bs * base_lr
             print(
