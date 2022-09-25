@@ -38,8 +38,8 @@ class LGSModule(pl.LightningDataModule):
                        for f_path in metadata['image'].values]
         captions = [caption for caption in metadata['caption'].values]
         skips = [skip for skip in metadata['skip'].values]
-        self.data_full = [(data[0], data[1]) for data in zip(
-            image_paths, captions, skips) if data[2] != "x"]
+        self.data_full = [(img, cap) for img, cap, skip in zip(
+            image_paths, captions, skips) if skip != "x"]
 
     def setup(self, stage=None):
         train_set_size = int(len(self.data_full) * 0.8)
