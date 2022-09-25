@@ -807,7 +807,6 @@ if __name__ == "__main__":
         data = instantiate_from_config(config.data)
 
         # configure learning rate
-        bs, base_lr = config.data.params.batch_size, config.model.base_learning_rate
 
         if not cpu:
             ngpu = len(lightning_config.trainer.gpus.strip(",").split(','))
@@ -821,15 +820,62 @@ if __name__ == "__main__":
         print(f"accumulate_grad_batches = {accumulate_grad_batches}")
         lightning_config.trainer.accumulate_grad_batches = accumulate_grad_batches
 
+        bs, base_lr = config.data.params.batch_size, config.model.base_learning_rate
+        auto_lr = False
+
+        if base_lr == "auto":
+            base_lr = 1e-03
+            auto_lr = True
+
+        model.learning_rate = base_lr
+
+        print(f"Setting learning rate to {model.learning_rate:.2e}")
+
+        if auto_lr:
+            print("Trying to find new learning rate automatically")
+
+            config.data.params.batch_size = 1
+            if 'train' in config.data.params:
+                config.data.params.train.params.batch_size = 1
+            if 'validation' in config.data.params:
+                config.data.params.validation.params.batch_size = 1
+
+            data_lr = instantiate_from_config(config.data)
+
+            trainer_lr_config = trainer_config.copy()
+            del trainer_lr_config["strategy"]
+
+            trainer_lr_kwargs = trainer_kwargs.copy()
+            del trainer_lr_kwargs["callbacks"]
+
+            trainer_lr_opt = argparse.Namespace(**trainer_lr_config)
+            trainer_lr = Trainer.from_argparse_args(
+                trainer_lr_opt, **trainer_lr_kwargs)
+            lr_finder = trainer_lr.tuner.lr_find(
+                model, data_lr, early_stop_threshold=1000.0)
+
+            suggest_lr = lr_finder.suggestion()
+
+            if suggest_lr is not None:
+                fig = lr_finder.plot(suggest=True)
+                fig.show()
+
+                base_lr = suggest_lr
+                model.learning_rate = base_lr
+
+                print(f"Updating learning rate to {model.learning_rate:.2e}")
+            else:
+                print("Failed to find a learning rate")
+
+            del data_lr
+            del trainer_lr
+            del lr_finder
+
         if opt.scale_lr:
             model.learning_rate = accumulate_grad_batches * ngpu * bs * base_lr
             print(
-                "Setting learning rate to {:.2e} = {} (accumulate_grad_batches) * {} (num_gpus) * {} (batchsize) * {:.2e} (base_lr)".format(
+                "Scaling learning rate to {:.2e} = {} (accumulate_grad_batches) * {} (num_gpus) * {} (batchsize) * {:.2e} (base_lr)".format(
                     model.learning_rate, accumulate_grad_batches, ngpu, bs, base_lr))
-        else:
-            model.learning_rate = base_lr
-            print("++++ NOT USING LR SCALING ++++")
-            print(f"Setting learning rate to {model.learning_rate:.2e}")
 
         # allow checkpointing via USR1
 
